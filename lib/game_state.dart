@@ -19,6 +19,10 @@ class GameState extends ChangeNotifier {
   static const int maxStage = 5;
   int get progress => (zone - 1) * maxStage + (stage - 1);
 
+  // 기록
+  int deaths = 0;
+  int bestProgress = 0;
+
   // 전투 상태
   Phase phase = Phase.walking;
   double playerHp = 100;
@@ -90,6 +94,10 @@ class GameState extends ChangeNotifier {
 
     switch (phase) {
       case Phase.walking:
+        // 전진 중 소량 자연 회복 (전투 사이 숨 고르기, 완전 회복은 안 됨)
+        if (playerHp < maxHp) {
+          playerHp = min(maxHp.toDouble(), playerHp + maxHp * 0.04 * dt);
+        }
         walkProgress += dt / 1.1;
         if (walkProgress >= 1) {
           _spawnMonster();
@@ -156,7 +164,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _monsterAttack(Monster m) {
-    final taken = max(1.0, m.damage - defense * 0.5);
+    final taken = max(1.0, m.damage - defense * 0.4);
     playerHp -= taken;
     shake = 0.5;
     floaters.add(FloatingText(
@@ -200,7 +208,8 @@ class GameState extends ChangeNotifier {
     while (xp >= xpNeeded) {
       xp -= xpNeeded;
       level++;
-      playerHp = maxHp.toDouble(); // 레벨업 시 완전 회복
+      // 레벨업 시 절반만 회복 (완전 회복 아님 → 누적 피해가 위협됨)
+      playerHp = min(maxHp.toDouble(), playerHp + maxHp * 0.5);
       floaters.add(FloatingText('LEVEL UP! Lv.$level', const Color(0xFF69F0AE),
           const Offset(0.34, 0.4),
           size: 26, maxLife: 1.4));
@@ -235,15 +244,27 @@ class GameState extends ChangeNotifier {
     } else {
       stage++;
     }
+    if (progress > bestProgress) bestProgress = progress;
   }
 
   void _respawn() {
+    deaths++;
+    // 패널티: 골드 15% 상실 + 한 스테이지 후퇴
+    // → 장비가 약하면 같은 구간에서 반복 사망(진행 벽)하게 됨
+    gold = (gold * 0.85).round();
+    if (stage > 1) {
+      stage--;
+    } else if (zone > 1) {
+      zone--;
+      stage = maxStage - 1;
+    }
+    floaters.add(FloatingText('💀 후퇴! (-15% 골드)', const Color(0xFFFF8A80),
+        const Offset(0.30, 0.5),
+        size: 22, maxLife: 1.4));
     playerHp = maxHp.toDouble();
     monster = null;
     walkProgress = 0;
     phase = Phase.walking;
-    // 패널티: 골드 일부 상실
-    gold = (gold * 0.9).round();
   }
 
   // ---- 전리품 선택 (UI에서 호출) ----

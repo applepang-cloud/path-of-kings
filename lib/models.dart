@@ -210,16 +210,18 @@ class Monster {
   ];
 
   static Monster spawn(int progress, {bool boss = false}) {
-    final scale = 1 + progress * 0.32;
+    // 체력은 완만하게, 공격력은 더 가파르게 → 장비로 못 따라가면 맞아 죽음
+    final hpScale = 1 + progress * 0.30;
+    final dmgScale = 1 + progress * 0.42;
     if (boss) {
       final b = _bossBank[progress % _bossBank.length];
       return Monster(
         name: b[0],
         emoji: b[1],
-        maxHp: (60 * scale * 3.2).roundToDouble(),
-        damage: (6 * scale * 1.5),
-        goldReward: (40 * scale * 4).round(),
-        xpReward: (30 * scale * 3).round(),
+        maxHp: (60 * hpScale * 3.2).roundToDouble(),
+        damage: (6 * dmgScale * 1.6),
+        goldReward: (40 * hpScale * 4).round(),
+        xpReward: (30 * hpScale * 3).round(),
         isBoss: true,
       );
     }
@@ -227,10 +229,10 @@ class Monster {
     return Monster(
       name: m[0],
       emoji: m[1],
-      maxHp: (28 * scale).roundToDouble(),
-      damage: (5 * scale),
-      goldReward: (10 * scale).round(),
-      xpReward: (8 * scale).round(),
+      maxHp: (28 * hpScale).roundToDouble(),
+      damage: (5 * dmgScale),
+      goldReward: (10 * hpScale).round(),
+      xpReward: (8 * hpScale).round(),
     );
   }
 }
