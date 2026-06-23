@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models.dart';
 import 'game_state.dart';
+import 'ui_kit.dart';
 
 /// 새 장비 획득 — 2개 중 1개를 좌우 슬라이드로 선택
 /// 왼쪽 = 판매(골드), 오른쪽 = 장착
@@ -14,8 +15,8 @@ class LootOverlay extends StatefulWidget {
 }
 
 class _LootOverlayState extends State<LootOverlay> {
-  int index = 0; // 현재 보고 있는 카드 (0 or 1)
-  double drag = 0; // 현재 드래그 양 (px)
+  int index = 0;
+  double drag = 0;
   bool decided = false;
 
   Equipment get current => widget.choices[index];
@@ -60,7 +61,6 @@ class _LootOverlayState extends State<LootOverlay> {
         child: Column(
           children: [
             const SizedBox(height: 8),
-            // 타이틀 배너
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               decoration: BoxDecoration(
@@ -74,15 +74,13 @@ class _LootOverlayState extends State<LootOverlay> {
                       fontSize: 24,
                       fontWeight: FontWeight.w900)),
             ),
-            const SizedBox(height: 12),
-            // 좌/우 안내 + 카드
+            const SizedBox(height: 8),
             Expanded(
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // 좌측 = 판매
                   Positioned(
-                    left: 10,
+                    left: 8,
                     child: _SideLabel(
                       title: '판매',
                       sub: '+${current.sellPrice}🪙',
@@ -91,9 +89,8 @@ class _LootOverlayState extends State<LootOverlay> {
                       color: const Color(0xFFFFB300),
                     ),
                   ),
-                  // 우측 = 장착
                   Positioned(
-                    right: 10,
+                    right: 8,
                     child: _SideLabel(
                       title: '장착',
                       sub: current.slot.label,
@@ -102,7 +99,6 @@ class _LootOverlayState extends State<LootOverlay> {
                       color: const Color(0xFF43A047),
                     ),
                   ),
-                  // 드래그 카드
                   GestureDetector(
                     onHorizontalDragUpdate: _onDragUpdate,
                     onHorizontalDragEnd: _onDragEnd,
@@ -112,24 +108,32 @@ class _LootOverlayState extends State<LootOverlay> {
                           : Duration.zero,
                       transform: Matrix4.identity()
                         ..translateByDouble(
-                            decided
-                                ? (drag > 0 ? 500.0 : -500.0)
-                                : drag,
+                            decided ? (drag > 0 ? 500.0 : -500.0) : drag,
                             0.0,
                             0.0,
                             1.0)
                         ..rotateZ(drag * 0.0008),
-                      child: _ItemCard(
-                          item: current,
-                          equipped: equipped,
-                          highlight: drag.abs() > 30,
-                          equipping: drag > 30),
+                      child: Container(
+                        width: 250,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: current.rarity.color.withValues(
+                                  alpha: drag.abs() > 30 ? 0.9 : 0.4),
+                              blurRadius: drag.abs() > 30 ? 30 : 14,
+                              spreadRadius: drag.abs() > 30 ? 4 : 1,
+                            ),
+                          ],
+                        ),
+                        child: EquipmentCardView(
+                            item: current, compareTo: equipped),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            // 다른 후보로 전환
             if (!decided)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
@@ -144,14 +148,13 @@ class _LootOverlayState extends State<LootOverlay> {
                             drag = 0;
                           }),
                           icon: const Icon(Icons.swap_horiz,
-                              color: Colors.white, size: 28),
+                              color: Colors.white, size: 26),
                         ),
-                        Text('다른 후보 보기 (${index + 1}/2)',
+                        Text('다른 후보 (${index + 1}/2)',
                             style: const TextStyle(
                                 color: Colors.white70, fontSize: 13)),
                       ],
                     ),
-                    // 다른 후보 미니 프리뷰
                     _MiniPreview(item: other),
                     const SizedBox(height: 6),
                     const Text('← 밀어서 판매    |    장착하려면 밀기 →',
@@ -204,114 +207,6 @@ class _SideLabel extends StatelessWidget {
   }
 }
 
-class _ItemCard extends StatelessWidget {
-  final Equipment item;
-  final Equipment? equipped;
-  final bool highlight;
-  final bool equipping;
-  const _ItemCard(
-      {required this.item,
-      required this.equipped,
-      required this.highlight,
-      required this.equipping});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = item.rarity.color;
-    return Container(
-      width: 220,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [c.withValues(alpha: 0.95), c.withValues(alpha: 0.55)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: c.withValues(alpha: highlight ? 0.9 : 0.4),
-            blurRadius: highlight ? 30 : 14,
-            spreadRadius: highlight ? 4 : 1,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(item.rarity.label,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13)),
-          ),
-          const SizedBox(height: 6),
-          Text(item.name,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16)),
-          const SizedBox(height: 4),
-          // 아이콘
-          Container(
-            width: 72,
-            height: 72,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: Text(item.slot.emoji, style: const TextStyle(fontSize: 40)),
-          ),
-          const SizedBox(height: 4),
-          Text('Lv.${item.level} · ${item.slot.label}',
-              style: const TextStyle(color: Colors.white, fontSize: 12)),
-          const Divider(color: Colors.white54, height: 16),
-          // 스탯 (현재 장착 대비 증감 화살표)
-          for (final e in item.stats.entries) _statRow(e.key, e.value),
-        ],
-      ),
-    );
-  }
-
-  Widget _statRow(Stat stat, int value) {
-    final cur = equipped?.stats[stat] ?? 0;
-    final diff = value - cur;
-    final up = diff > 0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(stat.label,
-              style: const TextStyle(color: Colors.white, fontSize: 13)),
-          Row(children: [
-            Text('+$value',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13)),
-            const SizedBox(width: 4),
-            if (equipped != null && diff != 0)
-              Icon(up ? Icons.arrow_upward : Icons.arrow_downward,
-                  color: up ? const Color(0xFF00E676) : const Color(0xFFFF5252),
-                  size: 14),
-          ]),
-        ],
-      ),
-    );
-  }
-}
-
 class _MiniPreview extends StatelessWidget {
   final Equipment item;
   const _MiniPreview({required this.item});
@@ -334,7 +229,7 @@ class _MiniPreview extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 fontSize: 12)),
         const SizedBox(width: 6),
-        Text('Lv${item.level}',
+        Text('iLv${item.itemLevel} ⚔️${item.power}',
             style: const TextStyle(color: Colors.white60, fontSize: 11)),
       ]),
     );
